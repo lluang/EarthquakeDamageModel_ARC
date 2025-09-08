@@ -89,7 +89,7 @@ def main(**config):
             "Total_Num_Building_Slight", "Total_Num_Building_Moderate", 
             "Total_Num_Building_Extensive", "Total_Num_Building_Complete"]
     df = df[cols]
-    df["GEOID"] = df["GEOID"].astype(int)
+    df["GEOID"] = df["GEOID"].astype(str)
     
 
     # ================================================
@@ -97,7 +97,7 @@ def main(**config):
     # ================================================
     # apply SVI 
     svi = process_svi(config["SVI_THRESHOLD"])
-    svi["FIPS"] = svi["FIPS"].astype(int)
+    svi["FIPS"] = svi["FIPS"].astype(str)
     
     # ================================================
     # o7 - Combine SVI and BHI, Format Output Data
