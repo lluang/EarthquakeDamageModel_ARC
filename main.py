@@ -1,4 +1,22 @@
+"""
+Earthquake Damage Model (EDM) For American Red Cross Mass Care Planning Assumptions
 
+The Earthquake Damage Model creates an estimate of shelter needs following an earthquake event.
+This model takes as inputs a python dictionary that includes an USGS event ID, and factors
+that relate building usability levels and utility loss severity.  This dictionary comes from the
+RedCrossHeinz_EarthquakeSShelterDemand.xlsm spreadsheet.
+
+It then retrieves current earthquake impact data from USGS ShakeMaps, census tract level population data,
+building and residential structure data, and CDC Social Vulnerability Index (SVI) data.
+
+The model then creates residential damage estimates, which are used to calculate and estimate of the impacted population.
+SVI data is then used with impacted population to calculate shelter-seeking population estimates.
+
+Outputs:
+
+model_output_{event_id}.csv - Tract level estimates of shelter-seeking population
+county_output_{event_id}.csv - County level estimates of shelter-seeking population (future)
+"""
 # ========== O1 ====================================
 from WorkingScripts.o1_getshakemap import FEEDURL
 from WorkingScripts.o1_getshakemap import fetch_earthquake_data, retrieve_event_data, download_and_extract_shakemap
@@ -80,17 +98,19 @@ def main(**config):
     df = process_bhi(o4out, config["BLDNG_USABILITY"], config["UL_SEVERITY"])
 
     df["population"] = df["population"].astype(int)
-    df["shelter_seeking_low"] = df["BHI_factor_low"]*df["population"]
-    df["shelter_seeking_high"] = df["BHI_factor_high"]*df["population"]
+    df["shelter_seeking_low"] = df["RBHI_factor_low"]*df["population"]
+    df["shelter_seeking_high"] = df["RBHI_factor_high"]*df["population"]
     cols = ["GEOID", "max_intensity", "population", 
             "Total_Num_Building", "risk_level", "geometry",
-            "BHI_factor_low", "BHI_factor_high",
+            "RBHI_factor_low", "RBHI_factor_high",
             "shelter_seeking_low", "shelter_seeking_high",
             "Total_Num_Building_Slight", "Total_Num_Building_Moderate", 
             "Total_Num_Building_Extensive", "Total_Num_Building_Complete"]
     df = df[cols]
     df["GEOID"] = df["GEOID"].astype(str)
     
+    # ================================================
+    # o5-2 - Aggregate to County Level
 
     # ================================================
     # o6 - Download SVI data 
@@ -113,8 +133,8 @@ def main(**config):
         "population",
         "Total_Num_Building",
         "risk_level",
-        "BHI_factor_low",
-        "BHI_factor_high",
+        "RBHI_factor_low",
+        "RBHI_factor_high",
         "shelter_seeking_low",
         "shelter_seeking_high",
         "Total_Num_Building_Slight",
@@ -130,4 +150,9 @@ def main(**config):
     print(df["shelter_seeking_low"].sum())
     print("upper bound")
     print(df["shelter_seeking_high"].sum())
+
+
+
+    return df
+    
 

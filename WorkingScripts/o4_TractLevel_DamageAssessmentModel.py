@@ -77,6 +77,7 @@ def build_damage_estimates(event_results, intensity_metric):
     GeoDataFrame
         A dataframe with total estimated building damage counts (slight, moderate, extensive, complete)
         for each tract.
+        moderate, extensive, complete corresponds to minor, major, and destroyed in Red Cross terminology.
     """
     # Set up labels for each damage level
     pga_levels = ['slight', 'mod', 'ext', 'comp']
