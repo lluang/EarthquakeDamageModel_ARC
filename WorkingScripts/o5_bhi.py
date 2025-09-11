@@ -11,9 +11,9 @@ at the census tract level based on post-earthquake building damage outcomes.
 Inputs:
 - `df`: GeoDataFrame with damage estimates from structural analysis
 - `bldng_usability`: Nested dict of functional (FU), partially usable (PU), and non-usable (NU)
-  building assumptions by damage level
+    building assumptions by damage level
 - `ul_severity`: Dictionary mapping 'low', 'medium', 'high' damage categories to
-  expected percent of utility loss for FU/PU categories
+    expected percent of utility loss for FU/PU categories
 
 Steps:
 1. Read damage results and census population data
@@ -92,6 +92,8 @@ the CMU Heinz school team final report
     df["perc_complete"] = df["Total_Num_Building_Complete"] / df["Total_Num_Building"]
 
     # Risk level corresponds to Mass Care Planning Tool damage levels high, medium, low
+    # Note that this is per tract. Red Cross normally counts households at each damage level
+
     df["risk_level"] = df[["perc_slight", "perc_moderate", "perc_extreme", "perc_complete"]].apply(
         lambda row: tract_damage_lvl(row.to_dict()), axis=1
     )
@@ -136,20 +138,38 @@ the CMU Heinz school team final report
     df["resi_prop"] = df["total_resi_count"] / df["TOTAL_BUILDING_COUNT"]
     df["RBHI_factor_low"] = df["BHI_factor_low"] * df["resi_prop"]
     df["RBHI_factor_high"] = df["BHI_factor_high"] * df["resi_prop"]
+    
+    # Calculate households impacted at each level of damage based on damage distribution levels
+    # Moderate, extensive, and complete correspond to low, medium, and high damage levels
+
+    df['residences_slight'] = (df['Total_Num_Building_Slight'] * df['resi_prop']).round(decimals=2)
+    df['residences_moderate'] = (df['Total_Num_Building_Moderate'] * df['resi_prop']).round(decimals=2)
+    df['residences_extensive'] = (df['Total_Num_Building_Extensive'] * df['resi_prop']).round(decimals=2)
+    df['residences_complete'] = (df['Total_Num_Building_Complete'] * df['resi_prop']).round(decimals=2)
 
     # Step 6: Merge population and finalize columns
     pop_data["GEO_ID"] = pop_data["GEO_ID"].astype(str)
     df = df.merge(pop_data[["GEO_ID", "P1_001N"]], how="inner", left_on="GEOID", right_on="GEO_ID")
     df = df.rename(columns={"P1_001N": "population"}).drop(columns=["GEO_ID"])
+    
+    # Calculate population impacted at each level of damage using the Red Cross terms of low, medium, high
+    df['population_none'] = (df['population'] * df['perc_slight']).round(decimals=2)
+    df['population_low'] = (df['population'] * df['perc_moderate']).round(decimals=2)
+    df['population_medium'] = (df['population'] * df['perc_extreme']).round(decimals=2)
+    df['population_high'] = (df['population'] * df['perc_complete']).round(decimals=2)
 
     final_cols = [
-        "GEOID", "max_intensity", "resi_prop", "geometry",
+        "GEOID", "max_intensity", "resi_prop", "geometry", "total_resi_count",
         "Total_Num_Building", "Total_Num_Building_Slight", "Total_Num_Building_Moderate",
         "Total_Num_Building_Extensive", "Total_Num_Building_Complete",
+        "perc_slight", "perc_moderate", "perc_extreme", "perc_complete",
+        "residences_slight", "residences_moderate", "residences_extensive", "residences_complete",
         "risk_level", "num_FU", "perc_FU_NH_low", "perc_FU_NH_high",
         "num_PU", "perc_PU_NH_low", "perc_PU_NH_high",
-        "num_NU", "RBHI_factor_low", "RBHI_factor_high", "population"
+        "num_NU", "BHI_factor_low", "BHI_factor_high", "RBHI_factor_low", "RBHI_factor_high", "population",
+        "population_none", "population_low", "population_medium", "population_high"
     ]
+    
     return df[final_cols].sort_values(by="max_intensity", ascending=False).reset_index(drop=True)
 
 def process_bhi_county(df, bldng_usability, ul_severity):
@@ -265,18 +285,34 @@ def process_bhi_county(df, bldng_usability, ul_severity):
     df_county["RBHI_factor_low"] = df_county["BHI_factor_low"] * df_county["resi_prop"]
     df_county["RBHI_factor_high"] = df_county["BHI_factor_high"] * df_county["resi_prop"]
 
+    # Calculate households and populationimpacted at each level of damage based on damage distribution levels
+    # Moderate, extensive, and complete correspond to low, medium, and high damage levels
+
+    df_county['residences_slight'] = (df_county['Total_Num_Building_Slight'] * df_county['resi_prop']).round(decimals=1)
+    df_county['residences_moderate'] = (df_county['Total_Num_Building_Moderate'] * df_county['resi_prop']).round(decimals=1)
+    df_county['residences_extensive'] = (df_county['Total_Num_Building_Extensive'] * df_county['resi_prop']).round(decimals=1)
+    df_county['residences_complete'] = (df_county['Total_Num_Building_Complete'] * df_county['resi_prop']).round(decimals=1)
 
     # Step 6: Merge population and finalize columns
     countylevel_pop_data["GEO_ID"] = countylevel_pop_data["countyfips"].astype(str)
     df_county = df_county.merge(countylevel_pop_data[["GEO_ID", "P1_001N"]], how="inner", left_on="GEOID", right_on="GEO_ID")
-    df_county = df_county   .rename(columns={"P1_001N": "population"}).drop(columns=["GEO_ID"])
+    df_county = df_county.rename(columns={"P1_001N": "population"}).drop(columns=["GEO_ID"])
+
+    # Calculate population impacted at each level of damage using the Red Cross terms of low, medium, high
+    df_county['population_none'] = (df_county['population'] * df_county['perc_slight']).round(decimals=0)
+    df_county['population_low'] = (df_county['population'] * df_county['perc_moderate']).round(decimals=0)
+    df_county['population_medium'] = (df_county['population'] * df_county['perc_extreme']).round(decimals=0)
+    df_county['population_high'] = (df_county['population'] * df_county['perc_complete']).round(decimals=0)
 
     final_cols = [
-        "GEOID", "max_intensity", "resi_prop", 
+        "GEOID", "max_intensity", "resi_prop", "geometry",
         "Total_Num_Building", "Total_Num_Building_Slight", "Total_Num_Building_Moderate",
         "Total_Num_Building_Extensive", "Total_Num_Building_Complete",
+        "residences_slight", "residences_moderate", "residences_extensive", "residences_complete",
         "risk_level", "num_FU", "perc_FU_NH_low", "perc_FU_NH_high",
         "num_PU", "perc_PU_NH_low", "perc_PU_NH_high",
-        "num_NU", "RBHI_factor_low", "RBHI_factor_high", "population"
+        "num_NU", "RBHI_factor_low", "RBHI_factor_high", "population",
+        "population_slight", "population_moderate", "population_extensive", "population_complete"
     ]
+    
     return df_county[final_cols].sort_values(by="max_intensity", ascending=False).reset_index(drop=True)

@@ -7,8 +7,8 @@ using fragility functions and peak ground acceleration (PGA) values.
 Main components:
 - `read_damage_functions`: Loads fragility curves for various building types and seismic code levels.
 - `build_damage_estimates`: Combines tract-level hazard intensity with building inventory
-  to estimate the probability and count of buildings experiencing slight, moderate, extensive,
-  and complete damage.
+    to estimate the probability and count of buildings experiencing slight, moderate, extensive,
+    and complete damage.
 
 Inputs:
 - A census-tract-level GeoDataFrame (`event_results`) with minimum PGA values and building counts
@@ -71,6 +71,8 @@ def build_damage_estimates(event_results, intensity_metric):
     ----------
     event_results : GeoDataFrame
         Contains census tract-level PGA values and building counts per structural type.
+    intensity_metric : str
+        The intensity metric to use (e.g., 'max', 'mean', 'min')
 
     Returns
     -------

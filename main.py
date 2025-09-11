@@ -29,7 +29,7 @@ from WorkingScripts.o3_get_building_structure import o3_get_building_structures
 # ========== O4 ====================================
 from WorkingScripts.o4_TractLevel_DamageAssessmentModel import build_damage_estimates
 # ========== O5 ====================================
-from WorkingScripts.o5_bhi import process_bhi
+from WorkingScripts.o5_bhi import process_bhi, process_bhi_county
 from WorkingScripts.o5_svi_module import process_svi
 
 import os
@@ -97,20 +97,43 @@ def main(**config):
     # ================================================
     df = process_bhi(o4out, config["BLDNG_USABILITY"], config["UL_SEVERITY"])
 
-    df["population"] = df["population"].astype(int)
-    df["shelter_seeking_low"] = df["RBHI_factor_low"]*df["population"]
-    df["shelter_seeking_high"] = df["RBHI_factor_high"]*df["population"]
+    df["population"] = df["population"].astype(float)
+    df["shelter_seeking_low"] = df["BHI_factor_low"]*df["population"]
+    df["shelter_seeking_high"] = df["BHI_factor_high"]*df["population"]
     cols = ["GEOID", "max_intensity", "population", 
-            "Total_Num_Building", "risk_level", "geometry",
+            "Total_Num_Building", "total_resi_count", "risk_level", 
+            "BHI_factor_low", "BHI_factor_high",
             "RBHI_factor_low", "RBHI_factor_high",
             "shelter_seeking_low", "shelter_seeking_high",
             "Total_Num_Building_Slight", "Total_Num_Building_Moderate", 
-            "Total_Num_Building_Extensive", "Total_Num_Building_Complete"]
+            "Total_Num_Building_Extensive", "Total_Num_Building_Complete",
+            "perc_slight", "perc_moderate", "perc_extreme", "perc_complete",
+            "residences_slight", "residences_moderate", "residences_extensive", "residences_complete",
+            "population_none", "population_low", "population_medium", "population_high"
+            ]
     df = df[cols]
     df["GEOID"] = df["GEOID"].astype(str)
     
     # ================================================
-    # o5-2 - Aggregate to County Level
+    # o5-2 - Implement BHI at County Level
+    # ================================================
+
+    """     df_county = process_bhi_county(o4out, config["BLDNG_USABILITY"], config["UL_SEVERITY"])
+
+    df_county["population"] = df_county["population"].astype(int)
+    df_county["shelter_seeking_low"] = df_county["BHI_factor_low"]*df_county["population"]
+    df_county["shelter_seeking_high"] = df_county["BHI_factor_high"]*df_county["population"]
+    cols = ["GEOID", "max_intensity", "population",
+            "Total_Num_Building", "total_resi_count", "risk_level",
+            "BHI_factor_low", "BHI_factor_high",
+            "shelter_seeking_low", "shelter_seeking_high",
+            "Total_Num_Building_Slight", "Total_Num_Building_Moderate", 
+            "Total_Num_Building_Extensive", "Total_Num_Building_Complete",
+            "residences_slight", "residences_moderate", "residences_extensive", "residences_complete",
+            "population_none", "population_low", "population_medium", "population_high"
+            ]
+    df_county = df_county[cols]
+    df_county["GEOID"] = df_county["GEOID"].astype(str) """
 
     # ================================================
     # o6 - Download SVI data 
@@ -130,17 +153,13 @@ def main(**config):
     columns = [
         "GEOID",
         "max_intensity",
-        "population",
-        "Total_Num_Building",
-        "risk_level",
-        "RBHI_factor_low",
-        "RBHI_factor_high",
-        "shelter_seeking_low",
-        "shelter_seeking_high",
-        "Total_Num_Building_Slight",
-        "Total_Num_Building_Moderate",
-        "Total_Num_Building_Extensive",
-        "Total_Num_Building_Complete",
+        "population", "Total_Num_Building", "total_resi_count", "risk_level",
+        "RBHI_factor_low", "RBHI_factor_high",
+        "shelter_seeking_low", "shelter_seeking_high",
+        "Total_Num_Building_Slight", "Total_Num_Building_Moderate", "Total_Num_Building_Extensive", "Total_Num_Building_Complete",
+        "perc_slight", "perc_moderate", "perc_extreme", "perc_complete",
+        "residences_slight", "residences_moderate", "residences_extensive", "residences_complete",
+        "population_none", "population_low", "population_medium", "population_high",
         "SVI_Value",
         "SVI_Value_Mapped"]
 
@@ -153,6 +172,6 @@ def main(**config):
 
 
 
-    return df
+    return df, o4out
     
 
