@@ -124,7 +124,7 @@ the CMU Heinz school team final report
 
     # Step 5: Adjust for residential share of total buildings
     resi_df = pd.read_csv("Data/building_data_csv/aggregated_building_data.csv")
-    resi_df["CENSUSCODE"] = resi_df["CENSUSCODE"].astype(str)
+    resi_df["CENSUSCODE"] = resi_df["CENSUSCODE"].astype(str).str.zfill(11)
     df["GEOID"] = df["GEOID"].astype(str)
 
     df = df.merge(resi_df, left_on="GEOID", right_on="CENSUSCODE")
@@ -151,6 +151,7 @@ the CMU Heinz school team final report
     pop_data["GEO_ID"] = pop_data["GEO_ID"].astype(str)
     df = df.merge(pop_data[["GEO_ID", "P1_001N"]], how="inner", left_on="GEOID", right_on="GEO_ID")
     df = df.rename(columns={"P1_001N": "population"}).drop(columns=["GEO_ID"])
+    df["population"] = df["population"].astype(float)
     
     # Calculate population impacted at each level of damage using the Red Cross terms of low, medium, high
     df['population_none'] = (df['population'] * df['perc_slight']).round(decimals=2)

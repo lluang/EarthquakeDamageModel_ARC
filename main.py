@@ -29,7 +29,7 @@ from WorkingScripts.o3_get_building_structure import o3_get_building_structures
 # ========== O4 ====================================
 from WorkingScripts.o4_TractLevel_DamageAssessmentModel import build_damage_estimates
 # ========== O5 ====================================
-from WorkingScripts.o5_bhi import process_bhi, process_bhi_county
+from WorkingScripts.o5_bhi import process_bhi 
 from WorkingScripts.o5_svi_module import process_svi
 
 import os
@@ -96,10 +96,10 @@ def main(**config):
     # o5 - Implement BHI
     # ================================================
     df = process_bhi(o4out, config["BLDNG_USABILITY"], config["UL_SEVERITY"])
-
+    df_o5 = df.copy()
     df["population"] = df["population"].astype(float)
-    df["shelter_seeking_low"] = df["BHI_factor_low"]*df["population"]
-    df["shelter_seeking_high"] = df["BHI_factor_high"]*df["population"]
+    df["shelter_seeking_low"] = df["RBHI_factor_low"]*df["population"]
+    df["shelter_seeking_high"] = df["RBHI_factor_high"]*df["population"]
     cols = ["GEOID", "max_intensity", "population", 
             "Total_Num_Building", "total_resi_count", "risk_level", 
             "BHI_factor_low", "BHI_factor_high",
@@ -118,29 +118,32 @@ def main(**config):
     # o5-2 - Implement BHI at County Level
     # ================================================
 
-    """     df_county = process_bhi_county(o4out, config["BLDNG_USABILITY"], config["UL_SEVERITY"])
+    """  df_county = process_bhi_county(o4out, config["BLDNG_USABILITY"], config["UL_SEVERITY"])
 
     df_county["population"] = df_county["population"].astype(int)
     df_county["shelter_seeking_low"] = df_county["BHI_factor_low"]*df_county["population"]
     df_county["shelter_seeking_high"] = df_county["BHI_factor_high"]*df_county["population"]
-    cols = ["GEOID", "max_intensity", "population",
-            "Total_Num_Building", "total_resi_count", "risk_level",
+    cols = ["GEOID", "max_intensity", "population", 
+            "Total_Num_Building", "total_resi_count", "risk_level", 
             "BHI_factor_low", "BHI_factor_high",
+            "RBHI_factor_low", "RBHI_factor_high",
             "shelter_seeking_low", "shelter_seeking_high",
             "Total_Num_Building_Slight", "Total_Num_Building_Moderate", 
             "Total_Num_Building_Extensive", "Total_Num_Building_Complete",
+            "perc_slight", "perc_moderate", "perc_extreme", "perc_complete",
             "residences_slight", "residences_moderate", "residences_extensive", "residences_complete",
             "population_none", "population_low", "population_medium", "population_high"
             ]
+
     df_county = df_county[cols]
-    df_county["GEOID"] = df_county["GEOID"].astype(str) """
+    df_county["GEOID"] = df_county["GEOID"].astype(str)  """
 
     # ================================================
     # o6 - Download SVI data 
     # ================================================
     # apply SVI 
     svi = process_svi(config["SVI_THRESHOLD"])
-    svi["FIPS"] = svi["FIPS"].astype(str)
+    svi["FIPS"] = svi["FIPS"].astype(str).str.zfill(11)
     
     # ================================================
     # o7 - Combine SVI and BHI, Format Output Data
@@ -164,14 +167,44 @@ def main(**config):
         "SVI_Value_Mapped"]
 
     df = df[columns]
-    df.to_csv("Data/model_output_{}.csv".format(config["event_id"]), index=False)
+    #df.to_csv("Data/model_output_{}.csv".format(config["event_id"]), index=False)
+    
     print("lower bound")
     print(df["shelter_seeking_low"].sum())
     print("upper bound")
     print(df["shelter_seeking_high"].sum())
 
+    df["countyfips"] = df["GEOID"].str.slice(0,5)
+    county_agg_dict = {'max_intensity' : 'max',
+                    'population' : 'sum',
+                    'Total_Num_Building' : 'sum',
+                    'risk_level' : 'max',
+                    'RBHI_factor_low' : 'mean',
+                    'RBHI_factor_high' : 'mean',
+                    'shelter_seeking_low' : 'sum',
+                    'shelter_seeking_high' : 'sum',
+                    'Total_Num_Building_Slight' : 'sum',
+                    'Total_Num_Building_Moderate' : 'sum',
+                    'Total_Num_Building_Extensive' : 'sum',
+                    'Total_Num_Building_Complete' : 'sum',
+                    'residences_slight' : 'sum',
+                    'residences_moderate' : 'sum',
+                    'residences_extensive' : 'sum',
+                    'residences_complete' : 'sum',
+                    'population_none' : 'sum',
+                    'population_low' : 'sum',
+                    'population_medium' : 'sum',
+                    'population_high' : 'sum',
+                    'perc_slight' : 'mean',
+                    'perc_moderate' : 'mean',
+                    'perc_extreme' : 'mean',
+                    'perc_complete' : 'mean',
+                    'SVI_Value' : 'mean',
+                    'SVI_Value_Mapped' : 'mean'
+    }
+    county_rollup = df.groupby("countyfips").agg(county_agg_dict).reset_index()
 
-
-    return df, o4out
+    #county_rollup.to_csv("Data/county_output_{}.csv".format(config["event_id"]), index=False)
+    return df, county_rollup, df_o5, o4out, event_results
     
 
