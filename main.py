@@ -174,7 +174,7 @@ def main(**config):
     print("upper bound")
     print(df["shelter_seeking_high"].sum())
 
-    df["countyfips"] = df["GEOID"].str.slice(0,5)
+    df["countyfips"] = df["GEOID"].str.slice(0,5).str.zfill(5)
     county_agg_dict = {'max_intensity' : 'max',
                     'population' : 'sum',
                     'Total_Num_Building' : 'sum',

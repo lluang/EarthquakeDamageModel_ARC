@@ -203,9 +203,9 @@ def process_bhi_county(df, bldng_usability, ul_severity):
     # Step 0: Load population data and aggregate to county level
     pop_data = pd.read_csv("Data/census_pop/USDECENNIALPL2020.csv").iloc[1:].reset_index(drop=True)
     pop_data = pop_data[["GEO_ID", "NAME", "P1_001N"]]
-    pop_data["GEO_ID"] = pop_data["GEO_ID"].str.replace("1400000US", "", regex=False)
+    pop_data["GEO_ID"] = pop_data["GEO_ID"].str.replace("1400000US", "", regex=False).str.zfill(11)
     pop_data['P1_001N'] = pop_data['P1_001N'].astype(int)
-    pop_data["countyfips"] = pop_data["GEO_ID"].str.slice(0,5)
+    pop_data["countyfips"] = pop_data["GEO_ID"].str.slice(0,5).str.zfill(5)
     countypop_agg_dict = {'P1_001N' : 'sum'}
     countylevel_pop_data = pop_data.groupby("countyfips").agg(countypop_agg_dict).reset_index()
     
@@ -221,7 +221,7 @@ def process_bhi_county(df, bldng_usability, ul_severity):
         'Total_Num_Building_Extensive' : 'sum',
         'Total_Num_Building_Complete' : 'sum'
     } 
-    df["countyfips"] = df["GEOID"].astype(str).str.slice(-1,5) # first 5 characters of GEOID are state and county FIPS
+    df["countyfips"] = df["GEOID"].astype(str).str.slice(0,5).str.zfill(5) # first 5 characters of GEOID are state and county FIPS
     
     df_county = df.groupby("countyfips").agg(county_agg_dict).reset_index()
 
@@ -263,7 +263,7 @@ def process_bhi_county(df, bldng_usability, ul_severity):
     # Step 5: Adjust for residential share of total buildings by county
     resi_df = pd.read_csv("Data/building_data_csv/aggregated_building_data.csv")
     resi_df["CENSUSCODE"] = resi_df["CENSUSCODE"].astype(str)
-    resi_df["countyfips"] = resi_df["CENSUSCODE"].str.slice(0,5)
+    resi_df["countyfips"] = resi_df["CENSUSCODE"].str.slice(0,5).str.zfill(5)
     resi_agg_dict = {
         'RESIDENTIAL_MULTI FAMILY' : 'sum',
         'RESIDENTIAL_OTHER' : 'sum',
@@ -273,7 +273,7 @@ def process_bhi_county(df, bldng_usability, ul_severity):
     }
     resi_county_df = resi_df.groupby("countyfips").agg(resi_agg_dict).reset_index()
     # Aggregate to county level
-    df_county["countyfips"] = df_county["countyfips"].astype(str)
+    df_county["countyfips"] = df_county["countyfips"]
 
     df_county = df_county.merge(resi_county_df, left_on="countyfips", right_on="countyfips")
     df_county["total_resi_count"] = (
